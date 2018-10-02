@@ -19,8 +19,6 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////////// */
 
 
-typedef vector<tuple<int,int>> vecTup;
-
 
 
 int requestNum;
@@ -28,7 +26,7 @@ int requestNum;
 
 // shared state
 int livingRequests;
-vecTup waiting;
+typedef vector<tuple<int,int>> waiting;
 
 
 
