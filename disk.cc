@@ -15,8 +15,8 @@ using namespace std;
 
 0 = accessing number of living requests
 1 = accessing vector of waiting request threads (1 = full)
-2 = accessing previous requesters
-3 = accessing living requesters
+2 = accessing previous requesters ***************
+3 = accessing living requesters   ***************
 
 
 ///////////////////////////////////////////////////////////////////////////////////// */
@@ -24,20 +24,20 @@ using namespace std;
 
 
 int requestNum;
-int maxRequesters = 0;
+int maxRequesters = 0;  //************** dis new
 //vector<int> requests;
 
 // shared state
 int livingRequests;
-int requesters = 0;
+int requesters = 0;  //****************
 vector< tuple<int,int> > waiting;
-vector<string> previousRequesters;
+vector<string> previousRequesters; //**************** made this to keep track of who is next to read
 
 
 void requester (void *a) {
-  thread_lock(3);
+  thread_lock(3);    //*************changed this stuff
   requesters++;
-  thread_unlock(3);
+  thread_unlock(3);  //*************
   //for every track
   int numDisk = (intptr_t) a;
   char c = 48 + numDisk;
@@ -52,7 +52,7 @@ void requester (void *a) {
   while(file >> s){
     track = atoi(s);
 
-    thread_lock(2); //check to see if previous requester was this requester
+    thread_lock(2); //check to see if previous requester was this requester **************all this down
     bool contains = false;
     for(int i = 0; i < previousRequesters.size(); i++){
       while(previousRequesters[i].compare(fn) == 0){
@@ -62,7 +62,7 @@ void requester (void *a) {
     }
     if(!contains){
       previousRequesters.push_back(fn);
-    }
+    } // *********************************to here up
 
     //cout << "req" << c << ": " << s << endl;
   
@@ -87,7 +87,7 @@ void requester (void *a) {
     thread_broadcast(1,1);
     thread_unlock(1);
 
-    //wake up other requesters
+    //wake up other requesters ********************* this is new
     if(previousRequesters.size() == maxRequesters){
       previousRequesters.erase(previousRequesters.begin(), previousRequesters.begin()+requestNum);
     }
@@ -104,7 +104,7 @@ void requester (void *a) {
 
 void servicer(void *a) {
   int curSer = -1;
-  while(requesters > 0){
+  while(requesters > 0){ //***************changed this
     thread_lock(0);
     if(livingRequests > 0){
       thread_lock(1);
@@ -113,7 +113,7 @@ void servicer(void *a) {
     
     //cout << "requesters: " << requesters << endl;
     //cout << "waiting.size() = " << waiting.size() << endl;
-    while(waiting.size() < requestNum){
+    while(waiting.size() < min(requestNum, maxRequesters)){ //*****************changed logic in here
       thread_wait(1, 1);
       thread_lock(3);
       if(requesters < maxRequesters){
@@ -165,7 +165,7 @@ void servicer(void *a) {
 
 void initializer(void *a) {
   int argc = (intptr_t)a;
-  for(int i = 0; i < argc; i++){
+  for(int i = 0; i < argc; i++){ //****************made this maxRequesters thing
     maxRequesters++;
   }
   for(int i = 0; i < argc; i++){
