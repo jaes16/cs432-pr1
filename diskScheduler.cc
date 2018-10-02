@@ -19,16 +19,13 @@ using namespace std;
 ///////////////////////////////////////////////////////////////////////////////////// */
 
 
-typedef vector<tuple<int,int>> vecTup;
-
-
 
 int requestNum;
 //vector<int> requests;
 
 // shared state
 int livingRequests;
-vecTup waiting;
+vector< tuple<int,int> > waiting;
 
 
 
@@ -36,7 +33,7 @@ vecTup waiting;
 
 void requester (int numDisk, int tracks[]) {
   //for every track
-  for(int i = 0; i < tracks.size; i++){
+  for(int i = 0; i < tracks.size(); i++){
     
     thread_lock(1);
 
@@ -46,7 +43,7 @@ void requester (int numDisk, int tracks[]) {
     }
     
     //update waiting list
-    tuple request = (numDisk, track[i]);
+    tuple<int, int> request = (numDisk, tracks[i]);
     waiting.push_back(request);
 
     //update number of living requests
@@ -55,7 +52,7 @@ void requester (int numDisk, int tracks[]) {
     thread_unlock(0);
     
     //wake up servicer
-    broadcast(1,1);
+    thread_broadcast(1,1);
     thread_unlock(1);
   }
 
@@ -66,9 +63,9 @@ void requester (int numDisk, int tracks[]) {
 
 void servicer(void *a) {
   int curSer = -1;
-  while(){
+  while(1){
     thread_lock(0);
-    if(livingRequest > 0){
+    if(livingRequests > 0){
       thread_lock(1);
     }
     thread_unlock(0);
@@ -100,15 +97,15 @@ void servicer(void *a) {
     
     //check if done, if not, return
     thread_lock(0);
-    if((livingRequest == 0) && (waiting.size() == 0)){
+    if((livingRequests == 0) && (waiting.size() == 0)){
       cout << "done" << endl;
       break;
     }
-    livingRequest--;
+    livingRequests--;
     thread_unlock(0);
 
     //wake all waiting threads
-    braodcast(1, 0);
+    thread_broadcast(1, 0);
     thread_unlock(1);
   
   }
