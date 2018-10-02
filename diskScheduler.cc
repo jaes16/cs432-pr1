@@ -31,7 +31,7 @@ vector< tuple<int,int> > waiting;
 
 
 
-void requester (int numDisk, int tracks[]) {
+void requester (int numDisk, vector<int> tracks) {
   //for every track
   for(int i = 0; i < tracks.size(); i++){
     
