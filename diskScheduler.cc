@@ -79,19 +79,19 @@ void servicer(void *a) {
     if(curSer == -1) {
       cout << "service requester " << get<0>(waiting[0]) << " track " << get<1>(waiting[0]) << endl;
       curSer = get<1>(waiting[0]);
-      waiting.erase(0);
+      waiting.erase(waiting.begin());
     } else {
       //find nearest to previous track
       int temp = 0;
       for (int i = 1; i < requestNum; i++){
-	if(abs(curSer-waiting[i]) < abs(curSer-(get<1>(waiting[temp])))){
+	if(abs(curSer-get<1>(waiting[i])) < abs(curSer-(get<1>(waiting[temp])))){
 	  temp = i;
 	}
       }
       //remove this track
       cout << "service requester " << get<0>(waiting[temp]) << " track " << get<1>(waiting[temp]) << endl;
       curSer = get<1>(waiting[temp]);
-      waiting.erase(temp);
+      waiting.erase(waiting.begin() + temp);
       
     }
     
