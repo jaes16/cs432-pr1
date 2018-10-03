@@ -33,32 +33,44 @@ vector< tuple<int,int> > waiting;
 
 void requester (void *a) {
 
-  //for every track
+  // read in file
   int numDisk = (intptr_t) a;
   char c = 48 + numDisk;
-  //cout << numDisk << endl;
   string fn = "disk.in";
   fn += c;
-
   ifstream file;
   file.open(fn);
   int track;
   char s[2048];
+
+  // for every track
   while(file >> s){
     track = atoi(s);
+
+    //    cout << "here: " << numDisk << ", " << s << endl;
+
 
     thread_lock(1);
     bool exist = false;
     bool contained = true;
+
+    // while the waiting list has another track from this requester, wait
     while(contained){
-      if((total < requestNum) && (waiting.size() < requestNum)){
+
+      //      cout << total << ", " <<  requestNum << ", " << waiting.size() << endl;
+      // however, if there are less total tracks than the size of the swaiting list, put in anyway
+      if((total <= requestNum) && (waiting.size() < requestNum)){
 	break;
       }
+
+      //checking if waiting list has another track from this requester
       for(int i = 0; i < waiting.size(); i++){
 	if(get<0>(waiting[i]) == numDisk){
 	  exist = true;
 	}
       }
+
+      //waiting list has another track from this requester: wait till servicer services a track, and check again.
       if(exist){
 	contained = true;	
 	/*	cout<< "//////////////////////" << endl;
@@ -69,14 +81,18 @@ void requester (void *a) {
 	cout << "here: " << numDisk << endl;
 	*/
 	thread_wait(1, 0);
+
+	// else exist
       }else {
 	contained = false;
       }
+      // for next check.
       exist = false;
     }
    
     //cout << "req" << c << ": " << s << endl;
 
+    
     //wait till there is a spot in the waiting list
     while(waiting.size() == requestNum){
       if(total < requestNum){
@@ -86,6 +102,7 @@ void requester (void *a) {
       thread_wait(1, 0);
     }
 
+    
     //update waiting list
     tuple<int, int> request = make_tuple(numDisk, track);
     waiting.push_back(request);
@@ -93,7 +110,7 @@ void requester (void *a) {
     cout << "requester "<< numDisk << " track " << track << endl;
 
 
-    //wake up servicer
+    //wake up servicer and other requesters
     thread_broadcast(1,1);
     thread_broadcast(1,0);
     thread_unlock(1);
@@ -103,135 +120,18 @@ void requester (void *a) {
 
 
 }
-/*
-void servicer(void *a) {
-  int curSer = -1;
-  while(1){
-
-    thread_lock(0);
-    if(livingRequests > 0){
-      thread_lock(1);
-    }
-    thread_unlock(0);
-
-    while(waiting.size() < requestNum){
-      thread_wait(1, 1);
-    }
-
-    // execute request
-    // first time
-    if(curSer == -1) {
-      cout << "service requester " << get<0>(waiting[0]) << " track " << get<1>(waiting[0]) << endl;
-      curSer = get<1>(waiting[0]);
-      waiting.erase(waiting.begin() + 0);
-    } else {
-      //find nearest to previous track
-      int temp = 0;
-      for (int i = 1; i < requestNum; i++){
-	if(abs(curSer-(get<1>(waiting[i]))) < abs(curSer-(get<1>(waiting[temp])))){
-	  temp = i;
-	}
-      }
-      //remove this track
-      cout << "service requester " << get<0>(waiting[temp]) << " track " << get<1>(waiting[temp]) << endl;
-      curSer = get<1>(waiting[temp]);
-      waiting.erase(waiting.begin() + temp);
-
-    }
-
-    //check if done, if not, return
-    thread_lock(0);
-    if((livingRequests == 0) && (waiting.size() == 0)){
-      cout << "done" << endl;
-      break;
-    }
-    livingRequests--;
-    thread_unlock(0);
-
-    //wake all waiting threads
-    thread_broadcast(1, 0);
-    thread_unlock(1);
-
-  }
-}
-
-
 
 void servicer(void *a) {
   int curSer = -1;
-  while(requesters > 0){
-    thread_lock(0);
-    if(livingRequests > 0){
-      thread_lock(1);
-    }
-    thread_unlock(0);
 
-    //cout << "requesters: " << requesters << endl;
-    //cout << "waiting.size() = " << waiting.size() << endl;
-    while(waiting.size() < requestNum){
-      thread_wait(1, 1);
-      thread_lock(3);
-      if(requesters < maxRequesters){
-	maxRequesters = requesters;
-      }
-      thread_unlock(3);
-      if(requesters == 0){
-	return;
-      }
-    }
-    // execute request
-    // first time
-    if(curSer == -1) {
-      cout << "service requester " << get<0>(waiting[0]) << " track " << get<1>(waiting[0]) << endl;
-      curSer = get<1>(waiting[0]);
-      waiting.erase(waiting.begin());
-    } else {
-      //find nearest to previous track
-      int temp = 0;
-      for (int i = 1; i < requestNum; i++){
-	if(abs(curSer-get<1>(waiting[i])) < abs(curSer-(get<1>(waiting[temp])))){
-	  temp = i;
-	}
-      }
-      //remove this track
-      cout << "service requester " << get<0>(waiting[temp]) << " track " << get<1>(waiting[temp]) << endl;
-      curSer = get<1>(waiting[temp]);
-      waiting.erase(waiting.begin() + temp);
-      //cout << "waiting size servicer: " << waiting.size() << endl;
-    }
-
-
-    //check if done, if not, return
-    thread_lock(0);
-    if((livingRequests == 0) && (waiting.size() == 0)){
-      cout << "done" << endl;
-      break;
-    }
-    livingRequests--;
-    thread_unlock(0);
-    //wake all waiting threads
-    thread_broadcast(1, 0);
-    thread_unlock(1);
-
-  }
-}
-*/
-
-
-
-
-
-void servicer(void *a) {
-  int curSer = -1;
+  // as long as total number of requests can fill the waiting list
   while(total >=  requestNum){
     thread_lock(1);
-    cout << "///////////" << total << ", " << requestNum << endl;
+    //    cout << "///////////" << total << ", " << requestNum << endl;
+
+    // while waiting list is not full, wait
     while (waiting.size() < requestNum){
-      if(total == requestNum){
-	break;
-      }
-
-
+      cout << "servicer waiting at " << waiting.size() << endl;
       thread_wait(1,1);
     }
 
@@ -257,12 +157,12 @@ void servicer(void *a) {
     }
 
 
-          cout<< "//////////////////////" << endl;
+    /*    cout<< "//////////////////////" << endl;
       for(int j = 0; j < waiting.size(); j++){
 	cout << "disk" << get<0>(waiting[j]) << "track " << get<1>(waiting[j]) << endl;
       }
       cout<< "//////////////////////" << endl;
-
+    */
 
     //wake all waiting threads
     thread_broadcast(1, 0);
@@ -273,38 +173,20 @@ void servicer(void *a) {
   
   cout << "hi///////////////////////////" << endl;
 
-  for(int i = total; i > 0; i--){
+  for(int i = requestNum-2; i >= 0; i--){
 
-     cout<< "//////////////////////" << endl;
-      for(int j = 0; j <= waiting.size(); j++){
-	cout << "disk" << get<0>(waiting[j]) << "track " << get<1>(waiting[j]) << endl;
-      }
-      cout<< "//////////////////////" << endl;      
-
-
-    if(i == 1){
+    if(i == 0){
     cout << "service requester " << get<0>(waiting[0]) << " track " << get<1>(waiting[0]) << endl;
     break;
     }
 
     
     thread_lock(1);
-    /*    while (waiting.size() < i){
-      cout<< "here: servicer" << endl;
-      
-      cout<< "//////////////////////" << endl;
-      for(int j = 0; j < waiting.size(); j++){
-	cout << "disk" << get<0>(waiting[j]) << "track " << get<1>(waiting[j]) << endl;
-      }
-      cout<< "//////////////////////" << endl;      
-      
-      thread_wait(1,1);
-    }
-  */
+
     // execute request
     //find nearest to previous track
     int temp = 0;
-    for (int j = 1; j < i; j++){
+    for (int j = 0; j < waiting.size(); j++){
       if(abs(curSer-get<1>(waiting[j])) < abs(curSer-(get<1>(waiting[temp])))){
 	temp = j;
       }
