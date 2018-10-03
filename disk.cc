@@ -104,16 +104,17 @@ void requester (void *a) {
 
 void servicer(void *a) {
   int curSer = -1;
-  while(requesters > 0){ //***************changed this
+  int total = (intptr_t) a;
+  while(total > 0){ //***************changed this
     thread_lock(0);
     if(livingRequests > 0){
       thread_lock(1);
     }
-    thread_unlock(0);
     
     //cout << "requesters: " << requesters << endl;
     //cout << "waiting.size() = " << waiting.size() << endl;
-    while(waiting.size() < min(requestNum, maxRequesters)){ //*****************changed logic in here
+    while(waiting.size() < min(requestNum, livingRequests)){ //*****************changed logic in here
+      if(total < requestNum)
       thread_wait(1, 1);
       thread_lock(3);
       if(requesters < maxRequesters){
@@ -168,51 +169,19 @@ void initializer(void *a) {
   for(int i = 0; i < argc; i++){ //****************made this maxRequesters thing
     maxRequesters++;
   }
+  ifstream f;
+  f.open("disk.in0");
+  int count = 0;
+  string s;
+  while(f>>s){
+    count++;
+  }
+  
   for(int i = 0; i < argc; i++){
     thread_create((thread_startfunc_t) requester, (void *)(intptr_t)i); 
   }
-  thread_create((thread_startfunc_t) servicer, (void *) a); 
+  thread_create((thread_startfunc_t) servicer, (void *)(intptr_t)(count * maxRequesters)); 
 }
-
-    /*
-// filling vector with requesters
-void fillVector(int argc, char **argv){
-  if(argc > 1){
-    queue<string> fileNames;
-    for(int i = 2; i < argc; i++){
-      fileNames.push(argv[i]);
-    }
-    int line = 0;
-    int currentFile = 0;
-    bool pushing;
-    while(!fileNames.empty()){
-      pushing = true;
-      ifstream fn;
-      string fName = fileNames.front();
-      fileNames.pop();
-      fn.open(fName);
-      if(fn.is_open()){
-	int num;
-	for(int count = 0; count <= line; count++){
-	  if(!(fn >> num)){
-	    pushing = false;
-	    break;
-	  }
-	}
-	if(pushing){
-	  requests.push_back(num);
-	  fileNames.push(fName);
-	}
-	currentFile++;
-	if(currentFile == argc - 2){
-	  currentFile = 0;
-	  line++;
-	}
-      }
-    }
-  }
-}
-    */
 
 int main(int argc, char **argv){
   requestNum = atoi(argv[1]);
