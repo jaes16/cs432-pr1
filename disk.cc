@@ -47,6 +47,7 @@ void requester (void *a) {
   while(file >> s){
     track = atoi(s);
 
+    //test
     //    cout << "here: " << numDisk << ", " << s << endl;
 
 
@@ -57,11 +58,16 @@ void requester (void *a) {
     // while the waiting list has another track from this requester, wait
     while(contained){
 
+      //test
       //      cout << total << ", " <<  requestNum << ", " << waiting.size() << endl;
+
       // however, if there are less total tracks than the size of the swaiting list, put in anyway
+      thread_lock(2);
       if((total <= requestNum) && (waiting.size() < requestNum)){
+	thread_unlock(2);
 	break;
       }
+      thread_unlock(2);
 
       //checking if waiting list has another track from this requester
       for(int i = 0; i < waiting.size(); i++){
@@ -73,13 +79,7 @@ void requester (void *a) {
       //waiting list has another track from this requester: wait till servicer services a track, and check again.
       if(exist){
 	contained = true;	
-	/*	cout<< "//////////////////////" << endl;
-	for(int j = 0; j < waiting.size(); j++){
-	  cout << "disk" << get<0>(waiting[j]) << "track " << get<1>(waiting[j]) << endl;
-	}
-	cout<< "//////////////////////" << endl;
-	cout << "here: " << numDisk << endl;
-	*/
+
 	thread_wait(1, 0);
 
 	// else exist
@@ -95,10 +95,13 @@ void requester (void *a) {
     
     //wait till there is a spot in the waiting list
     while(waiting.size() == requestNum){
+      thread_lock(2);
       if(total < requestNum){
+	thread_unlock(2);
 	break;
       }
-      cout << "here: " << numDisk << endl;
+      thread_unlock(2);
+      //      cout << "here: " << numDisk << endl;
       thread_wait(1, 0);
     }
 
@@ -125,13 +128,15 @@ void servicer(void *a) {
   int curSer = -1;
 
   // as long as total number of requests can fill the waiting list
+  thread_lock(2);
   while(total >=  requestNum){
+    thread_unlock(2);
     thread_lock(1);
     //    cout << "///////////" << total << ", " << requestNum << endl;
 
     // while waiting list is not full, wait
     while (waiting.size() < requestNum){
-      cout << "servicer waiting at " << waiting.size() << endl;
+      //      cout << "servicer waiting at " << waiting.size() << endl;
       thread_wait(1,1);
     }
 
@@ -170,8 +175,9 @@ void servicer(void *a) {
     total--;
 
   }
+  thread_unlock(2);
   
-  cout << "hi///////////////////////////" << endl;
+  //  cout << "hi///////////////////////////" << endl;
 
   for(int i = requestNum-2; i >= 0; i--){
 
